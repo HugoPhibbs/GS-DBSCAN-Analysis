@@ -2,14 +2,17 @@ import subprocess
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from sklearn.metrics import normalized_mutual_info_score
+import numpy as np
+import write_mnist as wm
 
 load_dotenv()
 
 
 def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, distancesBatchSize, distanceMetric,
-                  clusterBlockSize):
+                  clusterBlockSize, print_cmd=False):
     run_cmd = [
-        "../GS-DBSCAN-CPP/build/sDbscan",
+        "../GS-DBSCAN-CPP/build/GS-DBSCAN",
         "--datasetFilename", datasetFilename,
         "--outFile", outFile,
         "--n", str(n),
@@ -25,6 +28,11 @@ def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, d
         "--clusterBlockSize", str(clusterBlockSize)
     ]
 
+    print("Running GS-DBSCAN\n")
+
+    if print_cmd:
+        print(run_cmd)
+
     result = subprocess.run(run_cmd, capture_output=True, text=True)
 
     print("Standard Output:\n", result.stdout)
@@ -37,11 +45,36 @@ def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, d
     return result
 
 
+def print_results(results_df, nmi):
+    times = results_df['times'][0]
+    keys = list(times.keys())
+    values = list(times.values())
+    print("Times...")
+    for i in range(len(keys)):
+        print(f"{keys[i]}: {(values[i]) / 1000000:.2f}")
+
+    print("\n")
+
+    print("Number of clusters: ", results_df ['numClusters'][0])
+
+    print("\n")
+
+    print("NMI: ", nmi)
+
+
 def read_results(results_file):
     return pd.read_json(results_file)
 
 
-run_gs_dbscan("/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist_images_col_major.bin",
+def calculate_nmi(labels_true, labels_pred):
+    return normalized_mutual_info_score(labels_true, labels_pred)
+
+
+# (_, col_major_filename, _), all_images, true_labels = wm.write_mnist_to_binary(shuffle=True)
+
+col_major_filename = wm.COL_MAJOR_FILENAME
+
+run_gs_dbscan(col_major_filename,
               outFile="results.json",
               n=70000,
               d=784,
@@ -52,5 +85,12 @@ run_gs_dbscan("/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist_images_col_
               eps=0.11,
               alpha=1.2,
               distancesBatchSize=-1,
-              distanceMetric="L2",
-              clusterBlockSize=256)
+              distanceMetric="COSINE",
+              clusterBlockSize=256,
+              print_cmd=True)
+
+# results_df = read_results("results.json")
+
+# nmi = calculate_nmi(true_labels, results_df['labels'][0])
+#
+# print_results(results_df, nmi)
