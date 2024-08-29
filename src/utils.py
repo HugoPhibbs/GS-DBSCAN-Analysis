@@ -10,9 +10,9 @@ load_dotenv()
 
 
 def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, distancesBatchSize, distanceMetric,
-                  clusterBlockSize, print_cmd=False):
+                  clusterBlockSize, clusterOnCpu=False, projectionsMethod="AF", needToNormalize=True, print_cmd=False):
     run_cmd = [
-        "../GS-DBSCAN-CPP/build/GS-DBSCAN",
+        "../GS-DBSCAN-CPP/build-release/GS-DBSCAN",
         "--datasetFilename", datasetFilename,
         "--outFile", outFile,
         "--n", str(n),
@@ -25,7 +25,10 @@ def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, d
         "--alpha", str(alpha),
         "--distancesBatchSize", str(distancesBatchSize),
         "--distanceMetric", distanceMetric,
-        "--clusterBlockSize", str(clusterBlockSize)
+        "--clusterBlockSize", str(clusterBlockSize),
+        "--clusterOnCpu", str(int(clusterOnCpu)),
+        "--projectionsMethod", projectionsMethod,
+        "--needToNormalize", str(int(needToNormalize))
     ]
 
     print("Running GS-DBSCAN\n")
@@ -55,11 +58,20 @@ def print_results(results_df, nmi):
 
     print("\n")
 
-    print("Number of clusters: ", results_df ['numClusters'][0])
+    print("Number of clusters: ", results_df['numClusters'][0])
 
     print("\n")
 
     print("NMI: ", nmi)
+
+    print("\n")
+
+    # print("Number of core points: ", find_num_core_points(results_df['typeLabels'][0]))
+
+
+def find_num_core_points(typeLabels):
+    count = np.sum(np.array(typeLabels) == 1)
+    return count
 
 
 def read_results(results_file):
@@ -71,6 +83,9 @@ def calculate_nmi(labels_true, labels_pred):
 
 
 # (_, col_major_filename, _), all_images, true_labels = wm.write_mnist_to_binary(shuffle=True)
+
+
+true_labels = np.fromfile("./data/mnist_labels.bin", dtype=np.uint8)
 
 col_major_filename = wm.COL_MAJOR_FILENAME
 
@@ -87,10 +102,13 @@ run_gs_dbscan(col_major_filename,
               distancesBatchSize=-1,
               distanceMetric="COSINE",
               clusterBlockSize=256,
+              clusterOnCpu=True,
+              projectionsMethod="MATX",
+              needToNormalize=True,
               print_cmd=True)
 
-# results_df = read_results("results.json")
+results_df = read_results("results.json")
 
-# nmi = calculate_nmi(true_labels, results_df['labels'][0])
-#
-# print_results(results_df, nmi)
+nmi = calculate_nmi(true_labels, results_df['clusterLabels'][0])
+
+print_results(results_df, nmi)
