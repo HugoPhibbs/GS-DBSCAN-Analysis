@@ -10,7 +10,7 @@ load_dotenv()
 
 
 def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, distancesBatchSize, distanceMetric,
-                  clusterBlockSize, clusterOnCpu=False, projectionsMethod="AF", needToNormalize=True, print_cmd=False):
+                  clusterBlockSize, clusterOnCpu=False, needToNormalize=True, print_cmd=False):
     run_cmd = [
         "../GS-DBSCAN-CPP/build-release/GS-DBSCAN",
         "--datasetFilename", datasetFilename,
@@ -27,7 +27,6 @@ def run_gs_dbscan(datasetFilename, outFile, n, d, D, minPts, k, m, eps, alpha, d
         "--distanceMetric", distanceMetric,
         "--clusterBlockSize", str(clusterBlockSize),
         "--clusterOnCpu", str(int(clusterOnCpu)),
-        "--projectionsMethod", projectionsMethod,
         "--needToNormalize", str(int(needToNormalize))
     ]
 
@@ -95,15 +94,14 @@ run_gs_dbscan(col_major_filename,
               d=784,
               D=1024,
               minPts=50,
-              k=5,
-              m=50,
+              k=2,
+              m=2000,
               eps=0.11,
               alpha=1.2,
               distancesBatchSize=-1,
               distanceMetric="COSINE",
               clusterBlockSize=256,
               clusterOnCpu=True,
-              projectionsMethod="MATX",
               needToNormalize=True,
               print_cmd=True)
 
