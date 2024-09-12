@@ -6,14 +6,13 @@ COL_MAJOR_FILENAME = '/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist_imag
 ROW_MAJOR_FILENAME = '/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist_images_row_major.bin'
 LABEL_FILENAME = '/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist_labels.bin'
 
-
 def write_mnist_to_binary(shuffle=True):
     (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data()
 
     train_images = train_images.astype('float32')
     test_images = test_images.astype('float32')
 
-    # Combine training and test datasets, then shuffle them
+    # Combine training and test mnist8m, then shuffle them
     all_images = np.concatenate([train_images, test_images], axis=0)
     all_labels = np.concatenate([train_labels, test_labels], axis=0)
 
