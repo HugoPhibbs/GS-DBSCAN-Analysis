@@ -1,4 +1,46 @@
 from src.experiment.experiment import run_complete_sdbscan_pipeline
+import src.dataset_handling.mnist.write_mnist8m as wm8
+from src.experiment.experiment import run_gs_dbscan, read_results, add_nmi_to_results_labels_list, REPO_DIR
+import src.experiment.sample_utils as su
+import src.experiment.experiment as exp
+
+def run_mnist_samples(params: exp.RunParams):
+    pass
+
+
+def run_n_size_experiments(n_values=wm8.N_EXPERIMENT_VALUES, d=784, D=1024, minPts=50, k=5, m=50,
+                           eps=0.11, alpha=1.2, distancesBatchSize=200,
+                           distanceMetric="COSINE", clusterBlockSize=256, clusterOnCpu=True, needToNormalize=True,
+                           print_cmd=True, write_to_pickle=False):
+    results_df = None
+
+    sample_labels_list = []
+
+    sample_filenames_list, sample_labels_filenames_list = wm8.get_8m_sample_filenames()
+
+    for i in range(len(n_values)):
+        n = n_values[i]
+
+        sample_filename = sample_filenames_list[i]
+        out_file = f"{REPO_DIR}/results/n_experiments/mnist8m_sample_results_{n}.json"
+
+        try:
+            run_gs_dbscan(sample_filename, out_file, n, d, D, minPts, k, m, eps, alpha, distancesBatchSize,
+                          distanceMetric,
+                          clusterBlockSize, clusterOnCpu, needToNormalize, print_cmd)
+
+        except Exception as e:
+            print(f"Failed to run experiment with n {n}")
+            print(e)
+            print('Exiting Loop')
+            break
+
+        results_df = read_results(out_file, results_df)
+
+    add_nmi_to_results_labels_list(results_df, sample_labels_list)
+
+    if write_to_pickle:
+        results_df.to_pickle(f"{REPO_DIR}/results/n_experiments/results_df.pkl")
 
 
 # run_batch_experiments(distance_batch_sizes=[125], k=2, m=2000)
