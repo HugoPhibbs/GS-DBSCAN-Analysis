@@ -1,4 +1,4 @@
-import src.experiment.experiment as exp
+import src.experiment.experiment_utils as exp
 import pandas as pd
 import os
 
@@ -28,3 +28,18 @@ def run_sample(params: exp.RunParams, sample_paths_dict) -> pd.DataFrame:
     params.datasetFilename = data_path
 
     return exp.run_complete_sdbscan_pipeline(params)
+
+
+def get_sample_dict(dataset_name: str, sample_n_vals: list, sample_dir: str, dtypes: tuple=("f16", "f32")):
+    sample_paths_dict = {}  # dtype->data/labels->n->path
+
+    for dtype in dtypes:
+        sample_paths_dict[dtype] = {"data": {}, "labels": {}}
+        data_dict = sample_paths_dict[dtype]["data"]
+        labels_dict = sample_paths_dict[dtype]["labels"]
+
+        for n in sample_n_vals:
+            data_dict[n] = os.path.join(sample_dir, f"{dataset_name}_sample_n{n}_{dtype}.bin")
+            labels_dict[n] = os.path.join(sample_dir, f"{dataset_name}_sample_n{n}_{dtype}_labels.bin")
+
+    return sample_paths_dict

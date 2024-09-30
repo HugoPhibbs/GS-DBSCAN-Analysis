@@ -3,18 +3,20 @@ import pandas as pd
 import polars as pl
 import numpy as np
 from tqdm import tqdm
+import src.experiment.sample_utils as su
 
-PAMAP_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/raw/"
-PAMAP_HANDLED_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled"
+PAMAP_DATA_DIR = f"/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap"
+
+PAMAP_DIR = f"{PAMAP_DATA_DIR}/raw/"
+PAMAP_HANDLED_DIR = f"{PAMAP_DATA_DIR}/handled"
 PAMAP_DF_NAME = "pamap_df.parquet"
 
-PAMAP_F32_PATH = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled/pamap_f32.bin"
-PAMAP_F16_PATH = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled/pamap_f16.bin"
+PAMAP_F32_PATH = f"{PAMAP_DATA_DIR}/handled/pamap_f32.bin"
+PAMAP_F16_PATH = f"{PAMAP_DATA_DIR}/handled/pamap_f16.bin"
 
-PAMAP_LABELS_PATH = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled/pamap_labels.bin"
+PAMAP_LABELS_PATH = f"{PAMAP_DATA_DIR}/handled/pamap_labels.bin"
 
-PAMAP_SAMPLES_DIR_F32 = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled/samples/f32"
-PAMAP_SAMPLES_DIR_F16 = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled/samples/f16"
+PAMAP_SAMPLES_DIR = f"{PAMAP_DATA_DIR}/handled/samples"
 
 PAMAP_SAMPLE_SIZES = [
     100_000,
@@ -26,26 +28,12 @@ PAMAP_SAMPLE_SIZES = [
     3_000_000,
 ]
 
-
-PAMAP_SAMPLES_PATHS_F32 = {size: os.path.join(PAMAP_SAMPLES_DIR_F32, f"pamap_sample_n{size}_f32.bin") for size in
-                           PAMAP_SAMPLE_SIZES}
-PAMAP_SAMPLES_PATHS_F16 = {size: os.path.join(PAMAP_SAMPLES_DIR_F16, f"pamap_sample_n{size}_f16.bin") for size in
-                           PAMAP_SAMPLE_SIZES}
-
-PAMAP_SAMPLES_LABELS_PATHS_F32 = {size: os.path.join(PAMAP_SAMPLES_DIR_F32, f"pamap_sample_n{size}_f32_labels.bin") for size in
-                           PAMAP_SAMPLE_SIZES}
-PAMAP_SAMPLES_LABELS_PATHS_F16 = {size: os.path.join(PAMAP_SAMPLES_DIR_F16, f"pamap_sample_n{size}_f16_labels.bin") for size in
-                           PAMAP_SAMPLE_SIZES}
-
-PAMAP_SAMPLES_PATHS_DICT = {
-    "f32": {"data": PAMAP_SAMPLES_PATHS_F32, "labels": PAMAP_SAMPLES_LABELS_PATHS_F32},
-    "f16": {"data": PAMAP_SAMPLES_PATHS_F16, "labels": PAMAP_SAMPLES_LABELS_PATHS_F16}
-}
-
 PAMAP_PATHS_DICT = {
     "f32": PAMAP_F32_PATH,
     "f16": PAMAP_F16_PATH,
 }
+
+PAMAP_SAMPLES_PATHS_DICT = su.get_sample_dict("pamap", PAMAP_SAMPLE_SIZES, PAMAP_SAMPLES_DIR)
 
 
 PAMAP_D = 51
@@ -99,16 +87,8 @@ def write_samples(dtype=np.float32):
 
     pamap_labels = np.fromfile(PAMAP_LABELS_PATH, dtype=np.int8)
 
-    if dtype == np.float32:
-        samples_paths_dict = PAMAP_SAMPLES_PATHS_F32
-        samples_labels_paths_dict = PAMAP_SAMPLES_LABELS_PATHS_F32
-
-    elif dtype == np.float16:
-        samples_paths_dict = PAMAP_SAMPLES_PATHS_F16
-        samples_labels_paths_dict = PAMAP_SAMPLES_LABELS_PATHS_F16
-
-    else:
-        raise Exception("Invalid dtype")
+    samples_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype]["data"]
+    samples_labels_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype]["labels"]
 
     for size in tqdm(PAMAP_SAMPLE_SIZES, desc="Writing samples"):
         this_path = samples_paths_dict[size]
