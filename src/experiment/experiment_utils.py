@@ -6,12 +6,10 @@ import pandas as pd
 from dotenv import load_dotenv
 from sklearn.metrics import normalized_mutual_info_score
 import numpy as np
-import src.dataset_handling.mnist.write_mnist as wm
-import src.dataset_handling.mnist.write_mnist8m as wm8
 
 load_dotenv()
 
-REPO_DIR = "/"
+REPO_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis"
 
 EXEC_PATH = "/home/hphi344/Documents/GS-DBSCAN-CPP/build-release/GS-DBSCAN"
 
@@ -32,7 +30,7 @@ class RunParams:
     BBatchSize: int
     normBatchSize: int
     sigmaEmbed: int = 1
-    datasetDType: str = "f32"
+    datasetDType: str = "labels"
     n: int = -1
     D: int = -1
     datasetFilename: str = None
@@ -45,58 +43,15 @@ class RunParams:
     timeIt: bool = True
     print_cmd: bool = True
     labels_filename: str = None
+    ignoreAdjListSymmetry: bool = False
 
     def __str__(self):
         filename = os.path.splitext(os.path.basename(self.datasetFilename))[0]
-        return f"{filename}_{self.n}_{self.d}_{self.D}_{self.minPts}_{self.k}_{self.m}_{self.eps}_{self.alpha}_{self.distancesBatchSize}_{self.distanceMetric}_{self.clusterBlockSize}_{self.clusterOnCpu}_{self.needToNormalize}_{self.verbose}_{self.useBatchDbscan}_{self.useBatchABMatrices}_{self.useBatchNorm}_{self.timeIt}_{self.print_cmd}"
+        return f"{filename}_n{self.n}_d{self.d}_D{self.D}_mp{self.minPts}_k{self.k}_m{self.m}_e{self.eps}"
 
     @property
-    def outputFilename(self, base_dir="results", comments=""):
+    def outputFilename(self, base_dir=os.path.join(REPO_DIR, "results"), comments=""):
         return f"{base_dir}/results_{comments}_{str(self)}.json"
-
-
-# def run_batch_experiments(distance_batch_sizes=None, n=70000, d=784, D=1024, minPts=50, k=5, m=50, eps=0.11, alpha=1.2,
-#                           distanceMetric="COSINE", clusterBlockSize=256, clusterOnCpu=True, needToNormalize=True,
-#                           print_cmd=True, datasetFilename=wm.ROW_MAJOR_FILENAME, write_to_pickle=False):
-#     if distance_batch_sizes is None:
-#         distance_batch_sizes = [10, 100, 250, 500, 1000, 2000, 5000]
-#
-#     # Now run the experiments
-#
-#     out_files = [results_file_name(n, d, D, minPts, k, m, eps, alpha, distancesBatchSize, distanceMetric,
-#                                    clusterBlockSize, clusterOnCpu=False, needToNormalize=True) for distancesBatchSize in
-#                  distance_batch_sizes]
-#     results_df = None
-#
-#     sucessful_batch_sizes = []
-#
-#     for i in range(len(distance_batch_sizes)):
-#         distancesBatchSize = distance_batch_sizes[i]
-#         this_out_file = out_files[i]
-#
-#         try:
-#             run_gs_dbscan(datasetFilename, this_out_file, n, d, D, minPts, k, m, eps, alpha, distancesBatchSize,
-#                           distanceMetric,
-#                           clusterBlockSize, clusterOnCpu, needToNormalize, print_cmd)
-#
-#         except Exception as e:
-#             print(f"Failed to run experiment with distance batch size {distancesBatchSize}")
-#             print(e)
-#             print('Exiting Loop')
-#             break
-#
-#         results_df = read_results(this_out_file, results_df)
-#
-#         sucessful_batch_sizes.append(distancesBatchSize)
-#
-#     results_df = add_nmi_to_results(results_df, get_mnist_labels())
-#
-#     results_df["batchSize"] = sucessful_batch_sizes
-#
-#     if write_to_pickle:
-#         results_df.to_pickle(f"{REPO_DIR}/results/batch_experiments/results_df.pkl")
-#
-#     return results_df
 
 
 def run_gs_dbscan(params: RunParams):
@@ -143,6 +98,9 @@ def run_gs_dbscan(params: RunParams):
 
     if params.timeIt:
         run_cmd.append("--timeIt")
+
+    if params.ignoreAdjListSymmetry:
+        run_cmd.append("--ignoreAdjListSymmetry")
 
     print("Running GS-DBSCAN\n")
 
@@ -223,7 +181,7 @@ def get_mnist_labels(file=f"{REPO_DIR}/data/mnist/mnist_labels.bin"):
     return np.fromfile(file, dtype=np.uint8)
 
 
-def run_complete_sdbscan_pipeline(params: RunParams) -> pd.DataFrame | None:
+def run_complete_sdbscan_pipeline(params: RunParams):
     try:
         run_gs_dbscan(params)
 
