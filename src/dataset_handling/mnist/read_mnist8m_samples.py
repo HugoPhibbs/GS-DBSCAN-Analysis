@@ -32,15 +32,3 @@ def read_samples(dtype="f32"):
         labels.append(arr)
 
     return samples, labels
-
-
-# samples, labels = read_samples()
-
-f16_50k = np.fromfile("/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist8m/samples/data/f16/mnist8m_f16_sample_50000.bin", dtype=np.float16)
-
-f16_50k = f16_50k.reshape(50000, 784)
-
-print(f16_50k.shape)
-
-
-plt.imshow(f16_50k[0].reshape(28, 28), cmap="gray")
