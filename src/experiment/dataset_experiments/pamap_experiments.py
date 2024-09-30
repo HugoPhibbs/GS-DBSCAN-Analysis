@@ -3,7 +3,7 @@ import pandas as pd
 import src.dataset_handling.pamap.write_pamap as wp
 import src.experiment.sample_utils as su
 
-import src.experiment.experiment as exp
+import src.experiment.experiment_utils as exp
 
 PAMAP_RESULTS_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/results/pamap/samples/"
 

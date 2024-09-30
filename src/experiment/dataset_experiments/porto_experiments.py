@@ -1,4 +1,4 @@
-from src.experiment.experiment import run_complete_sdbscan_pipeline
+from src.experiment.experiment_utils import run_complete_sdbscan_pipeline
 from src.dataset_handling.spatial_datasets.handle_porto import SAMPLE_S640_F32_PATH, S640_SAMPLE_SIZE, SAMPLE_S80_F32_PATH, S80_SAMPLE_SIZE
 
 EPSILON = 0.008
