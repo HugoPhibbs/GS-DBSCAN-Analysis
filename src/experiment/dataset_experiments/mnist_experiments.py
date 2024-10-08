@@ -1,12 +1,14 @@
 from src.experiment.experiment_utils import run_complete_sdbscan_pipeline
 import src.dataset_handling.mnist.write_mnist8m as wm8
-from src.experiment.experiment_utils import run_gs_dbscan, read_results, add_nmi_to_results_labels_list, REPO_DIR
+from src.experiment.experiment_utils import run_gs_dbscan, read_results, REPO_DIR
 import src.experiment.sample_utils as su
 import src.experiment.experiment_utils as exp
 
-def run_mnist_samples(params: exp.RunParams):
-    pass
+MNIST_RESULTS_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/results/mnist/samples/"
 
+def run_mnist_samples(params: exp.RunParams, sample_results_df_name):
+    results_df = su.run_sample_experiments(params, MNIST_RESULTS_DIR, wm8.N_EXPERIMENT_VALUES, wm8.MNIST_8M_SAMPLES_DICT, sample_results_df_name)
+    return results_df
 
 if __name__ == '__main__':
 
@@ -62,19 +64,28 @@ if __name__ == '__main__':
     #                               useBatchNorm=True,
     #                               dataset_dtype="f16", ABatchSize=100_000, miniBatchSize=100_000, normBatchSize=100_000, BBatchSize=32)
 
-    params = exp.RunParams(
-        datasetFilename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_images_row_major_f16.bin",
-        labels_filename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_labels_f16.bin",
-        n=70_000, d=784, D=1024, minPts=50, k=2, m=2000, eps=0.11, alpha=1.2,
-        distancesBatchSize=125, distanceMetric="COSINE",
-        clusterBlockSize=256, clusterOnCpu=True, needToNormalize=True, print_cmd=True,
-        verbose=True, useBatchDbscan=True, timeIt=True, useBatchABMatrices=False,
-        useBatchNorm=True,
-        datasetDType="f16", ABatchSize=10_000, BBatchSize=10_000, miniBatchSize=10_000, normBatchSize=10_000, ignoreAdjListSymmetry=True)
+    # params = exp.RunParams(
+    #     datasetFilename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_images_row_major_f16.bin",
+    #     labels_filename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_labels_f16.bin",
+    #     n=70_000, d=784, D=1024, minPts=50, k=2, m=2000, eps=0.11, alpha=1.2,
+    #     distancesBatchSize=125, distanceMetric="COSINE",
+    #     clusterBlockSize=256, clusterOnCpu=True, needToNormalize=True, print_cmd=True,
+    #     verbose=True, useBatchDbscan=True, timeIt=True, useBatchABMatrices=False,
+    #     useBatchNorm=True,
+    #     datasetDType="f16", ABatchSize=10_000, BBatchSize=10_000, miniBatchSize=10_000, normBatchSize=10_000, ignoreAdjListSymmetry=False)
+    #
+    # run_complete_sdbscan_pipeline(params)
 
-    run_complete_sdbscan_pipeline(params)
+    params = exp.RunParams(d=784, D=1024, minPts=50, k=2, m=2000, eps=0.04, alpha=1.2,
+                           distancesBatchSize=1000, distanceMetric="COSINE",
+                           clusterBlockSize=256, clusterOnCpu=True, needToNormalize=True, print_cmd=True,
+                           verbose=False, useBatchDbscan=True, timeIt=True, useBatchABMatrices=True,
+                           useBatchNorm=True,
+                           datasetDType="f16", ABatchSize=10_000, BBatchSize=28, miniBatchSize=10_000, normBatchSize=10_000, ignoreAdjListSymmetry=True)
 
-    # run_complete_sdbscan_pipeline("results.json",
+    results = run_mnist_samples(params)
+
+# run_complete_sdbscan_pipeline("results.json",
     #                               datasetFilename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_images_row_major.bin",
     #                               labels_filename="/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_labels.bin",
     #                               n=70_000, d=784, D=1024, minPts=50, k=5, m=50, eps=0.11, alpha=1.2,
