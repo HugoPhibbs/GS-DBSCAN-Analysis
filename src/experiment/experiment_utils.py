@@ -19,8 +19,6 @@ EXEC_PATH = "/home/hphi344/Documents/GS-DBSCAN-CPP/build-release/GS-DBSCAN"
 class RunParams:
     d: int
     minPts: int
-    k: int
-    m: int
     eps: float
     alpha: float
     distancesBatchSize: int
@@ -32,6 +30,8 @@ class RunParams:
     normBatchSize: int
     sigmaEmbed: int = 1
     datasetDType: str = "labels"
+    k: int = -1
+    m: int = -1
     n: int = -1
     D: int = -1
     datasetFilename: str = None
@@ -186,6 +186,43 @@ def run_complete_sdbscan_pipeline(params: RunParams, results_parquet_name = None
     print_results(results_df, nmi)
 
     return results_df
+
+def run_k_m_experiments(k_m_vals, params, parquet_name=None):
+    results_df_list = []
+
+    for k, m in k_m_vals:
+        params.k = k
+        params.m = m
+
+        this_result_df = run_complete_sdbscan_pipeline(params)
+
+        results_df_list.append(this_result_df)
+
+    results_df = pd.concat(results_df_list)
+
+    if parquet_name is not None:
+        results_df.to_parquet(parquet_name)
+
+    return results_df
+
+def get_k_m_experiements_table(k_m_vals, results_df):
+    overall_times = results_df['times'].apply(lambda x: x['overall']).values
+    overall_times = np.array(overall_times) / 1000000
+
+    nmi_vals = results_df['nmi'].values
+
+    table_df = pd.DataFrame({
+        "m": [m for _, m in k_m_vals],
+        "k": [k for k, _ in k_m_vals],
+        "Time (s)": overall_times,
+        "NMI": nmi_vals
+    })
+
+    # Convert the DataFrame to LaTeX format
+    latex_table = table_df.to_latex(index=False, column_format='c'*len(table_df.columns), escape=False)
+
+    return latex_table
+
 
 # run_n_size_experiments(
 #     k=2,
