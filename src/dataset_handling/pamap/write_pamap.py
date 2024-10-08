@@ -21,11 +21,16 @@ PAMAP_SAMPLES_DIR = f"{PAMAP_DATA_DIR}/handled/samples"
 PAMAP_SAMPLE_SIZES = [
     100_000,
     250_000,
+    325_000,
     500_000,
+    750_000,
     1_000_000,
     1_500_000,
+    2_000_000,
     2_500_000,
     3_000_000,
+    3_500_000,
+    3_850_505
 ]
 
 PAMAP_PATHS_DICT = {
@@ -36,7 +41,7 @@ PAMAP_PATHS_DICT = {
 PAMAP_SAMPLES_PATHS_DICT = su.get_sample_dict("pamap", PAMAP_SAMPLE_SIZES, PAMAP_SAMPLES_DIR)
 
 
-PAMAP_D = 51
+PAMAP_DIM = 51
 PAMAP_N = 3850505
 
 
@@ -80,15 +85,15 @@ def write_arrays():
     np_labels.astype(np.int8).tofile(PAMAP_LABELS_PATH)
 
 
-def write_samples(dtype=np.float32):
+def write_samples(dtype=np.float32, dtype_str="f32"):
     pamap_array = np.fromfile(PAMAP_F32_PATH, dtype=np.float32)
     pamap_array = pamap_array.astype(np.float16)
-    pamap_array = pamap_array.reshape(-1, PAMAP_D)
+    pamap_array = pamap_array.reshape(-1, PAMAP_DIM)
 
     pamap_labels = np.fromfile(PAMAP_LABELS_PATH, dtype=np.int8)
 
-    samples_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype]["data"]
-    samples_labels_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype]["labels"]
+    samples_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype_str]["data"]
+    samples_labels_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype_str]["labels"]
 
     for size in tqdm(PAMAP_SAMPLE_SIZES, desc="Writing samples"):
         this_path = samples_paths_dict[size]
@@ -102,4 +107,4 @@ def write_samples(dtype=np.float32):
 
 
 if __name__ == "__main__":
-    write_samples(dtype=np.float16)
+    write_samples(dtype=np.float32, dtype_str= "f32")
