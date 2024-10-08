@@ -1,6 +1,7 @@
 import os.path
 import subprocess
 from dataclasses import dataclass
+import copy
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -34,6 +35,7 @@ class RunParams:
     n: int = -1
     D: int = -1
     datasetFilename: str = None
+    labels_filename: str = None
     clusterOnCpu: bool = True
     needToNormalize: bool = True
     verbose: bool = True
@@ -42,7 +44,6 @@ class RunParams:
     useBatchNorm: bool = False
     timeIt: bool = True
     print_cmd: bool = True
-    labels_filename: str = None
     ignoreAdjListSymmetry: bool = False
 
     def __str__(self):
@@ -152,36 +153,11 @@ def read_results(results_file):
 def calculate_nmi(labels_true, labels_pred):
     return normalized_mutual_info_score(labels_true, labels_pred)
 
-
-def add_nmi_to_results_labels_list(results_df, true_labels_list):
-    nmi_vals = []
-
-    for i in range(len(results_df)):
-        nmi = calculate_nmi(true_labels_list[i], results_df['clusterLabels'].iloc[i])
-        nmi_vals.append(nmi)
-
-    results_df['nmi'] = nmi_vals
-
-    return results_df
-
-
-def add_nmi_to_results(results_df, true_labels):
-    nmi_vals = []
-
-    for i in range(len(results_df)):
-        nmi = calculate_nmi(true_labels, results_df['clusterLabels'].iloc[i])
-        nmi_vals.append(nmi)
-
-    results_df['nmi'] = nmi_vals
-
-    return results_df
-
-
 def get_mnist_labels(file=f"{REPO_DIR}/data/mnist/mnist_labels.bin"):
     return np.fromfile(file, dtype=np.uint8)
 
 
-def run_complete_sdbscan_pipeline(params: RunParams):
+def run_complete_sdbscan_pipeline(params: RunParams, results_parquet_name = None):
     try:
         run_gs_dbscan(params)
 
@@ -195,10 +171,17 @@ def run_complete_sdbscan_pipeline(params: RunParams):
 
     nmi = -1
 
+    results_df["params"] = [copy.deepcopy(params.__dict__)]
+
     if params.labels_filename is not None:
         true_labels = get_mnist_labels(params.labels_filename)
 
         nmi = calculate_nmi(true_labels, results_df['clusterLabels'][0])
+
+        results_df["nmi"] = nmi
+
+    if results_parquet_name is not None:
+        results_df.to_parquet(results_parquet_name)
 
     print_results(results_df, nmi)
 
