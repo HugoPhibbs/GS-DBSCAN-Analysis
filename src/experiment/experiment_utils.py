@@ -205,7 +205,7 @@ def run_k_m_experiments(k_m_vals, params, parquet_name=None):
 
     return results_df
 
-def get_k_m_experiements_table(k_m_vals, results_df):
+def get_k_m_experiments_table(k_m_vals, results_df):
     overall_times = results_df['times'].apply(lambda x: x['overall']).values
     overall_times = np.array(overall_times) / 1000000
 
