@@ -5,7 +5,7 @@ import shutil
 
 REPO_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis"
 
-MNIST_8M_FILE_PATH = f"{REPO_DIR}/data/mnist8m/mnist8m_f32_X.bin"
+MNIST_8M_FILE_PATH = lambda dtype: f"{REPO_DIR}/data/mnist8m/mnist8m_{dtype}_X.bin"
 MNIST_8M_LABELS_FILE_NAME = f"{REPO_DIR}/data/mnist8m/mnist8m_y_8100000_784.bin"
 N_EXPERIMENT_VALUES = [70_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000, 2_000_000, 3_000_000,
                        5_000_000, 8_000_000]
@@ -18,11 +18,11 @@ MNIST_8M_SAMPLES_DICT = su.get_sample_dict("mnist8m", sample_n_vals=N_EXPERIMENT
 MNIST_8M_SIZE = 8_100_000
 
 
-def write_8m_txt_to_binary():
+def write_8m_txt_to_binary(type_str="f16"):
     mnist8m = np.loadtxt(f"{REPO_DIR}/data/mnist8m/mnist8m_X.txt")
     mnist8m /= 255.0
-    mnist8m = mnist8m.astype(np.float32)
-    mnist8m.tofile(MNIST_8M_FILE_PATH)
+    mnist8m = mnist8m.astype(np.float32 if type_str == "f32" else np.float16)
+    mnist8m.tofile(MNIST_8M_FILE_PATH(type_str))
     mnist8m_labels = np.loadtxt(f"{REPO_DIR}/data/mnist8m/mnist8m_y_8100000_784.txt")
     mnist8m_labels = mnist8m_labels.astype(np.uint8)
     mnist8m_labels.tofile(MNIST_8M_LABELS_FILE_NAME)
@@ -32,10 +32,10 @@ def write_8m_txt_to_binary():
 # But I'm keeping it here anyway - the samples are already written and I ceebs changing it.
 
 def generate_8m_samples(type_str):
-    mnist_8m = np.fromfile(MNIST_8M_FILE_PATH, dtype=np.float32)
+    mnist_8m = np.fromfile(MNIST_8M_FILE_PATH(dtype=type_str), dtype=np.float32)
     mnist_8m = mnist_8m.reshape((MNIST_8M_SIZE, 784))
 
-    mnist_8m_labels = np.fromfile(MNIST_8M_LABELS_FILE_NAME, dtype=np.uint8)
+    mnist_8m_labels = np.fromfile(MNIST_8M_FILE_PATH(dtype=type_str), dtype=np.uint8)
 
     print("Read mnist8m binary")
 
@@ -73,5 +73,5 @@ def generate_8m_samples(type_str):
 # write_8m_txt_to_binary()
 
 if __name__ == '__main__':
-    generate_8m_samples("f16")
+    write_8m_txt_to_binary("f16")
     pass

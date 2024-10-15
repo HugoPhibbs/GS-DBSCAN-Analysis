@@ -3,6 +3,8 @@ import subprocess
 from dataclasses import dataclass
 import copy
 
+from tqdm import tqdm
+
 import pandas as pd
 from dotenv import load_dotenv
 from sklearn.metrics import normalized_mutual_info_score
@@ -19,7 +21,6 @@ EXEC_PATH = "/home/hphi344/Documents/GS-DBSCAN-CPP/build-release/GS-DBSCAN"
 class RunParams:
     d: int
     minPts: int
-    eps: float
     alpha: float
     distancesBatchSize: int
     distanceMetric: str
@@ -28,6 +29,7 @@ class RunParams:
     ABatchSize: int
     BBatchSize: int
     normBatchSize: int
+    eps: float = -1
     sigmaEmbed: int = 1
     datasetDType: str = "labels"
     k: int = -1
@@ -222,6 +224,23 @@ def get_k_m_experiments_table(k_m_vals, results_df):
     latex_table = table_df.to_latex(index=False, column_format='c'*len(table_df.columns), escape=False)
 
     return latex_table
+
+def run_eps_experiments(eps_vals, params, parquet_name=None):
+    results_df_list = []
+
+    for eps in tqdm(eps_vals, "Running eps experiments"):
+        params.eps = eps
+
+        this_result_df = run_complete_sdbscan_pipeline(params)
+
+        results_df_list.append(this_result_df)
+
+    results_df = pd.concat(results_df_list)
+
+    if parquet_name is not None:
+        results_df.to_parquet(parquet_name)
+
+    return results_df
 
 
 # run_n_size_experiments(

@@ -84,6 +84,54 @@ def plot_sample_time_breakdown(sample_results_df, save_file=None, title="Sample 
 
     return fig, ax
 
+def plot_sample_time_breakdown_perc(sample_results_df, save_file=None, title="Sample Size vs Runtime Breakdown (Percentage)"):
+    n_vals = [params["n"] for params in sample_results_df["params"]]
+
+    times_overall_vals = np.array([times["overall"] for times in sample_results_df["times"]]) / 1e6
+
+    # Calculate individual times in seconds
+    distances_vals = np.array([times["totalTimeDistances"] for times in sample_results_df["times"]]) / 1e6
+    copy_convert_vals = np.array([times["copyingAndConvertData"] for times in sample_results_df["times"]]) / 1e6
+    process_adj_list_vals = np.array([times["processAdjacencyList"] for times in sample_results_df["times"]]) / 1e6
+    AB_matrices_vals = np.array([times["constructABMatrices"] for times in sample_results_df["times"]]) / 1e6
+    adj_list_vals = np.array([times["adjList"] for times in sample_results_df["times"]]) / 1e6
+    clustering_vals = np.array([times["formClusters"] for times in sample_results_df["times"]]) / 1e6
+    normalize_vals = np.array([times["normalise"] for times in sample_results_df["times"]]) / 1e6
+
+    remainder_vals = times_overall_vals - (distances_vals + copy_convert_vals + process_adj_list_vals +
+                                           AB_matrices_vals + adj_list_vals + clustering_vals + normalize_vals)
+
+    # Calculate percentage contributions of each component
+    distances_pct = (distances_vals / times_overall_vals) * 100
+    copy_convert_pct = (copy_convert_vals / times_overall_vals) * 100
+    process_adj_list_pct = (process_adj_list_vals / times_overall_vals) * 100
+    AB_matrices_pct = (AB_matrices_vals / times_overall_vals) * 100
+    adj_list_pct = (adj_list_vals / times_overall_vals) * 100
+    clustering_pct = (clustering_vals / times_overall_vals) * 100
+    normalize_pct = (normalize_vals / times_overall_vals) * 100
+    remainder_pct = (remainder_vals / times_overall_vals) * 100
+
+    # Plotting the percentages
+    fig, ax = plt.subplots()
+
+    ax.plot(n_vals, distances_pct, label="Distances")
+    ax.plot(n_vals, AB_matrices_pct, label="AB Matrices")
+    ax.plot(n_vals, adj_list_pct, label="Adj List")
+    ax.plot(n_vals, process_adj_list_pct, label="Process Adj List")
+    ax.plot(n_vals, copy_convert_pct, label="Copy and Convert")
+    ax.plot(n_vals, clustering_pct, label="Forming Clusters")
+    ax.plot(n_vals, normalize_pct, label="Normalize")
+    ax.plot(n_vals, remainder_pct, label="Other")
+
+    ax.set_title(title)
+    ax.set_xlabel("Sample Size")
+    ax.set_ylabel("Percentage of Total Runtime (%)")
+    ax.legend(loc="upper left")
+
+    if save_file is not None:
+        plt.savefig(f"plots/{save_file}", dpi=300)
+
+    return fig, ax
 
 def run_sample(params: exp.RunParams, sample_paths_dict) -> pd.DataFrame:
     data_path = sample_paths_dict[params.datasetDType]["data"][params.n]
