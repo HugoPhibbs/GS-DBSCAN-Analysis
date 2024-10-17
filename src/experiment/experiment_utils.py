@@ -6,11 +6,8 @@ import copy
 from tqdm import tqdm
 
 import pandas as pd
-from dotenv import load_dotenv
 from sklearn.metrics import normalized_mutual_info_score
 import numpy as np
-
-load_dotenv()
 
 REPO_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis"
 
