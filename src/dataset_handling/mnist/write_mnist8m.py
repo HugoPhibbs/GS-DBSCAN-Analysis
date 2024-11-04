@@ -10,6 +10,11 @@ MNIST_8M_LABELS_FILE_NAME = f"{REPO_DIR}/data/mnist8m/mnist8m_y_8100000_784.bin"
 N_EXPERIMENT_VALUES = [70_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000, 2_000_000, 3_000_000,
                        5_000_000, 8_000_000]
 
+MNIST_8M_PATHS_DICT = {
+    "f16": f"{REPO_DIR}/data/mnist8m/mnist8m_f16_X.bin",
+    "f32": f"{REPO_DIR}/data/mnist8m/mnist8m_f32_X.bin"
+}
+
 MNIST_8M_SAMPLES_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist8m/samples"
 
 MNIST_8M_SAMPLES_DICT = su.get_sample_dict("mnist8m", sample_n_vals=N_EXPERIMENT_VALUES,
