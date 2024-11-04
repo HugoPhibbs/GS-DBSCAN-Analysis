@@ -13,7 +13,6 @@ def write_cifar10(dtype="f16"):
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert the image to a PyTorch tensor
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),  # Normalize to mean=0 and std=1 for each channel
-        transforms.Lambda(lambda x: x.view(-1))  # Flatten the image to a 1D vector
     ])
 
     # Download the CIFAR-10 train and test datasets with the specified transformations
