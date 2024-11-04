@@ -1,13 +1,61 @@
+import os
+
+import pandas as pd
 from src.experiment.experiment_utils import run_complete_sdbscan_pipeline
 import src.dataset_handling.mnist.write_mnist8m as wm8
-from src.experiment.experiment_utils import run_gs_dbscan, read_results, REPO_DIR
+from src.experiment.experiment_utils import run_gs_dbscan, read_json_results, REPO_DIR
 import src.experiment.sample_utils as su
 import src.experiment.experiment_utils as exp
+import src.experiment.experiment_cpu as exp_cpu
 
-MNIST_RESULTS_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/results/mnist/samples/"
+MNIST_RESULTS_DIR = "/home/hphi344/Documents/GS-DBSCAN-Analysis/results/mnist/samples/raw"
+
+def run_mnist_normal(params) -> pd.DataFrame:
+    params.labels_filename = r"/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_labels_f16.bin"
+    params.datasetFilename = r"/home/hphi344/Documents/GS-DBSCAN-Analysis/data/mnist/mnist_images_row_major_f16.bin"
+    params.n = 70_000
+    params.d = 784
+
+    return exp.run_complete_sdbscan_pipeline(params)
+
+def run_mnist8m_normal(params: exp.RunParams, dtype="f32") -> pd.DataFrame:
+    pamap_path = wm8.MNIST_8M_PATHS_DICT[dtype]
+
+    labels_path = wm8.MNIST_8M_LABELS_FILE_NAME
+
+    params.labels_filename = labels_path
+    params.datasetFilename = pamap_path
+    params.n = wm8.MNIST_8M_SIZE
+    params.d = 784
+
+    return exp.run_complete_sdbscan_pipeline(params)
+
+def run_mnist8m_normal_cpu(params: exp_cpu.CpuRunParams, dtype="f32") -> pd.DataFrame:
+    pamap_path = wm8.MNIST_8M_PATHS_DICT[dtype]
+
+    labels_path = wm8.MNIST_8M_LABELS_FILE_NAME
+
+    params.labels_filename = labels_path
+    params.datasetFilename = pamap_path
+    params.n = wm8.MNIST_8M_SIZE
+    params.d = 784
+
+    return exp_cpu.run_cpu_sdbscan(params)
+
 
 def run_mnist_samples(params: exp.RunParams, sample_results_df_name):
-    results_df = su.run_sample_experiments(params, MNIST_RESULTS_DIR, wm8.N_EXPERIMENT_VALUES, wm8.MNIST_8M_SAMPLES_DICT, sample_results_df_name)
+    results_df = su.run_sample_experiments(params, wm8.N_EXPERIMENT_VALUES, wm8.MNIST_8M_SAMPLES_DICT, sample_results_df_name, parquet_dir="/home/hphi344/Documents/GS-DBSCAN-Analysis/results/mnist/samples/parquets")
+    return results_df
+
+def run_mnist_samples_cpu(params: exp_cpu.CpuRunParams, sample_results_df_name, results_subdir=None, max_n=float("inf")):
+    results_dir = MNIST_RESULTS_DIR
+
+    if results_subdir:
+        results_dir = os.path.join(MNIST_RESULTS_DIR, results_subdir)
+
+    n_vals = [val for val in wm8.N_EXPERIMENT_VALUES if val <= max_n]
+
+    results_df = su.run_sample_experiments_cpu(params, results_dir, n_vals, wm8.MNIST_8M_SAMPLES_DICT, sample_results_df_name)
     return results_df
 
 if __name__ == '__main__':
