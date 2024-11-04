@@ -1,0 +1,4 @@
+buildIndexTime: 35
+checkXSupportingDistanceTime: 11
+findCorePointsTime: 78
+formClustersTime: 0
