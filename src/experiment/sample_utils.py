@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import src.experiment.experiment_cpu as exp_cpu
 
 
-def run_sample_experiments(params: exp.RunParams, results_dir: str, sample_sizes: list,
+def run_sample_experiments(params: exp.RunParams, sample_sizes: list,
                            sample_paths_dict=None,
-                           sample_experiment_name="sample_experiments") -> pd.DataFrame:
+                           sample_experiment_name="sample_experiments", parquet_dir=None) -> pd.DataFrame:
     results_df_list = []
 
     for n in sample_sizes:
@@ -21,7 +21,9 @@ def run_sample_experiments(params: exp.RunParams, results_dir: str, sample_sizes
         results_df_list.append(this_result_df)
 
     results_df = pd.concat(results_df_list)
-    results_df.to_parquet(os.path.join(results_dir, sample_experiment_name + ".parquet"))
+
+    if parquet_dir is not None:
+        results_df.to_parquet(os.path.join(parquet_dir, sample_experiment_name + ".parquet"))
 
     return results_df
 
@@ -58,9 +60,14 @@ def run_sample_experiments_cpu(cpu_params: exp_cpu.CpuRunParams, results_dir: st
 
     for n in sample_sizes:
         cpu_params.n = n
+
+        cpu_params.output_file = os.path.join(results_dir, f"cpu_{sample_experiment_name}_n{n}")
+
         set_params_labels_and_data_paths(sample_paths_dict, cpu_params, cpu_params.n, "f32")
 
-        this_result_df = exp_cpu.run_cpu_sdbscan(cpu_params)
+        this_result_df = exp_cpu.run_cpu_sdbscan(cpu_params, running_sample=True)
+
+        results_df_list.append(this_result_df)
 
     results_df = pd.concat(results_df_list)
     results_df.to_parquet(os.path.join(results_dir, sample_experiment_name + ".parquet"))
@@ -68,12 +75,15 @@ def run_sample_experiments_cpu(cpu_params: exp_cpu.CpuRunParams, results_dir: st
     return results_df
 
 
-def plot_sample_time_results(sample_results_df, save_path=None, title="Sample size vs total runtime"):
+
+def plot_sample_time_results(sample_results_df, save_path=None, title="Sample size vs total runtime", fig=None, ax=None, label="sDBSCAN"):
     n_vals = [params["n"] for params in sample_results_df["params"]]
     time_vals = np.array([times["overall"] for times in sample_results_df["times"]]) / 1e6
 
-    fig, ax = plt.subplots()
-    ax.plot(n_vals, time_vals)
+    if fig is None and ax is None:
+        fig, ax = plt.subplots()
+
+    line, = ax.plot(n_vals, time_vals, label=label)
     ax.set_title(title)
     ax.set_xlabel("Sample Size")
     ax.set_ylabel("Time (s)")
@@ -81,19 +91,60 @@ def plot_sample_time_results(sample_results_df, save_path=None, title="Sample si
     if save_path is not None:
         plt.savefig(save_path, dpi=300)
 
-    # Return the figure and axes for further manipulation or display in the notebook
-    return fig, ax
+    # Return the figure, axes, and line for further manipulation or display in the notebook
+    return fig, ax, line
+
+def plot_compare_cpu_gpu_time(results_gpu_df, results_cpu_df, save_path=None, title="Sample size vs runtime", add_speedup=False):
+    fig, ax, line_gpu = plot_sample_time_results(results_gpu_df, save_path=None, title=title, label="CUDA-sDBSCAN")
+    fig, ax, line_cpu = plot_sample_time_results(results_cpu_df, save_path=None, title=title, ax=ax, fig=fig, label="CPU-sDBSCAN")
+
+    if add_speedup:
+        n_vals = [params["n"] for params in results_gpu_df["params"]]
+        time_vals_gpu = np.array([times["overall"] for times in results_gpu_df["times"]]) / 1e6
+        time_vals_cpu = np.array([times["overall"] for times in results_cpu_df["times"]]) / 1e6
+
+        speedup_vals = time_vals_cpu / time_vals_gpu
+
+        ax2 = ax.twinx()
+        line_speedup, = ax2.plot(n_vals, speedup_vals, color="red", linestyle="--", label="Speedup")
+        print(f"Average Speedup: {np.mean(speedup_vals)}")
+
+        ax2.set_ylabel("Speedup")
+        ax2.set_ylim(0, np.max(speedup_vals) + 1)
+
+        # Collect handles and labels for both axes
+        lines, labels = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax2.legend(lines + lines2, labels + labels2, loc="lower right")
+    else:
+        ax.legend([line_gpu, line_cpu], ["CUDA-sDBSCAN", "CPU sDBSCAN"], loc="lower right")
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300)
+
+    plt.show()
 
 
-def plot_sample_nmi_results(sample_results_df, save_path=None, title="Sample size vs NMI"):
+def plot_compare_cpu_gpu_nmi(results_gpu_df, results_cpu_df, title ="Sample size vs NMI", save_path=None):
+    fig, ax = plot_sample_nmi_results(results_gpu_df, save_path=None)
+    plot_sample_nmi_results(results_cpu_df, title=title, save_path=None, ax=ax, fig=fig)
+    plt.legend(["CUDA-sDBSCAN", "CPU sDBSCAN"])
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300)
+
+
+def plot_sample_nmi_results(sample_results_df, save_path=None, title="Sample size vs NMI", fig=None, ax=None):
     n_vals = [params["n"] for params in sample_results_df["params"]]
     nmi_vals = sample_results_df["nmi"]
 
-    fig, ax = plt.subplots()
+    if fig is None and ax is None:
+        fig, ax = plt.subplots()
     ax.plot(n_vals, nmi_vals)
     ax.set_title(title)
     ax.set_xlabel("Sample Size")
     ax.set_ylabel("NMI")
+    ax.set_ylim(0, 0.5)
 
     if save_path is not None:
         plt.savefig(save_path, dpi=300)
@@ -135,7 +186,7 @@ def plot_sample_time_breakdown(sample_results_df, save_file=None, title="Sample 
 
 
 def plot_sample_time_breakdown_perc(sample_results_df, save_file=None,
-                                    title="Sample Size vs Runtime Breakdown (Percentage)"):
+                                    title="Sample Size vs Runtime Breakdown (Percentage)", ymax=105):
     n_vals = [params["n"] for params in sample_results_df["params"]]
 
     times_overall_vals = np.array([times["overall"] for times in sample_results_df["times"]]) / 1e6
@@ -145,39 +196,35 @@ def plot_sample_time_breakdown_perc(sample_results_df, save_file=None,
     copy_convert_vals = np.array([times["copyingAndConvertData"] for times in sample_results_df["times"]]) / 1e6
     process_adj_list_vals = np.array([times["processAdjacencyList"] for times in sample_results_df["times"]]) / 1e6
     AB_matrices_vals = np.array([times["constructABMatrices"] for times in sample_results_df["times"]]) / 1e6
-    adj_list_vals = np.array([times["adjList"] for times in sample_results_df["times"]]) / 1e6
-    clustering_vals = np.array([times["formClusters"] for times in sample_results_df["times"]]) / 1e6
-    normalize_vals = np.array([times["normalise"] for times in sample_results_df["times"]]) / 1e6
 
     remainder_vals = times_overall_vals - (distances_vals + copy_convert_vals + process_adj_list_vals +
-                                           AB_matrices_vals + adj_list_vals + clustering_vals + normalize_vals)
+                                           AB_matrices_vals)
 
     # Calculate percentage contributions of each component
     distances_pct = (distances_vals / times_overall_vals) * 100
     copy_convert_pct = (copy_convert_vals / times_overall_vals) * 100
     process_adj_list_pct = (process_adj_list_vals / times_overall_vals) * 100
     AB_matrices_pct = (AB_matrices_vals / times_overall_vals) * 100
-    adj_list_pct = (adj_list_vals / times_overall_vals) * 100
-    clustering_pct = (clustering_vals / times_overall_vals) * 100
-    normalize_pct = (normalize_vals / times_overall_vals) * 100
     remainder_pct = (remainder_vals / times_overall_vals) * 100
 
     # Plotting the percentages
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    ax.plot(n_vals, distances_pct, label="Distances")
-    ax.plot(n_vals, AB_matrices_pct, label="AB Matrices")
-    ax.plot(n_vals, adj_list_pct, label="Adj List")
-    ax.plot(n_vals, process_adj_list_pct, label="Process Adj List")
-    ax.plot(n_vals, copy_convert_pct, label="Copy and Convert")
-    ax.plot(n_vals, clustering_pct, label="Forming Clusters")
-    ax.plot(n_vals, normalize_pct, label="Normalize")
-    ax.plot(n_vals, remainder_pct, label="Other")
+    ax.plot(n_vals, distances_pct, label="Distance Calculations")
+    ax.plot(n_vals, AB_matrices_pct, label="Create AB Matrices")
+    ax.plot(n_vals, process_adj_list_pct, label="Ensure Adjacency List Symmetry")
+    ax.plot(n_vals, copy_convert_pct, label="Copy dataset from CPU to GPU")
+    ax.plot(n_vals, remainder_pct, label="Other (incl. Forming Clusters)")
 
     ax.set_title(title)
     ax.set_xlabel("Sample Size")
     ax.set_ylabel("Percentage of Total Runtime (%)")
-    ax.legend(loc="upper left")
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    ax.set_yticks(range(0, 110, 10))
+    ax.set_ylim(0, ymax)
+
+    plt.subplots_adjust(right=0.5)
+    plt.tight_layout()
 
     if save_file is not None:
         plt.savefig(f"plots/{save_file}", dpi=300)

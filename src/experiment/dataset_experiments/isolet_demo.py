@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import normalize
@@ -19,19 +20,34 @@ eps_values = np.linspace(0.01, 0.2, 20)  # Range of epsilon values to test
 
 nmi_scores = []
 
-# Run DBSCAN for each epsilon value and compute NMI
-for eps in eps_values:
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
-    labels = dbscan.fit_predict(X_normalized)
-    
-    # Calculate NMI using the true labels
-    nmi = normalized_mutual_info_score(y_true, labels, average_method='arithmetic')
-    nmi_scores.append(nmi)
 
-# Plotting the NMI scores against epsilon values
-plt.plot(eps_values, nmi_scores, marker='o')
-plt.xlabel('Epsilon (eps)')
-plt.ylabel('Normalized Mutual Information (NMI)')
-plt.title('DBSCAN Performance on ISOLET Dataset (Cosine Distance)')
-plt.grid(True)
-plt.savefig('isolet_dbscan.png', dpi=300)
+start = time.time()
+
+dbscan = DBSCAN(eps=0.12, min_samples=min_samples, metric='cosine')
+labels = dbscan.fit_predict(X_normalized)
+
+end = time.time()
+
+print(f"Time taken: {end - start} seconds")
+
+nmi = normalized_mutual_info_score(y_true, labels, average_method='arithmetic')
+
+print(f"NMI: {nmi}")
+
+
+# # Run DBSCAN for each epsilon value and compute NMI
+# for eps in eps_values:
+#     dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
+#     labels = dbscan.fit_predict(X_normalized)
+    
+#     # Calculate NMI using the true labels
+#     nmi = normalized_mutual_info_score(y_true, labels, average_method='arithmetic')
+#     nmi_scores.append(nmi)
+
+# # Plotting the NMI scores against epsilon values
+# plt.plot(eps_values, nmi_scores, marker='o')
+# plt.xlabel('Epsilon (eps)')
+# plt.ylabel('Normalized Mutual Information (NMI)')
+# plt.title('DBSCAN Performance on ISOLET Dataset (Cosine Distance)')
+# plt.grid(True)
+# plt.savefig('isolet_dbscan.png', dpi=300)

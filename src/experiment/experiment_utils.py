@@ -1,4 +1,5 @@
 import os.path
+import re
 import subprocess
 from dataclasses import dataclass
 import copy
@@ -44,13 +45,19 @@ class RunParams:
     timeIt: bool = True
     print_cmd: bool = True
     ignoreAdjListSymmetry: bool = False
+    outputfile_dir: str = None
 
     def __str__(self):
         filename = os.path.splitext(os.path.basename(self.datasetFilename))[0]
-        return f"{filename}_n{self.n}_d{self.d}_D{self.D}_mp{self.minPts}_k{self.k}_m{self.m}_e{self.eps}"
+        return f"{filename}_n{self.n}_d{self.d}_D{self.D}_mp{self.minPts}_k{self.k}_m{self.m}_e{self.eps:.4f}"
 
     @property
-    def outputFilename(self, base_dir=os.path.join(REPO_DIR, "results"), comments=""):
+    def outputfile_path(self, base_dir=None, comments=""):
+        if self.outputfile_dir is None:
+            base_dir = os.path.join(REPO_DIR, "results")
+        else:
+            base_dir = self.outputfile_dir
+
         return f"{base_dir}/results_{comments}_{str(self)}.json"
 
 
@@ -58,7 +65,7 @@ def run_gs_dbscan(params: RunParams):
     run_cmd = [
         EXEC_PATH,
         "--datasetFilename", params.datasetFilename,
-        "--outputFilename", params.outputFilename,
+        "--outputFilename", params.outputfile_path,
         "--n", str(params.n),
         "--d", str(params.d),
         "--D", str(params.D),
@@ -145,9 +152,25 @@ def find_num_core_points(typeLabels):
     return count
 
 
-def read_results(results_file):
+def read_json_results(results_file):
     return pd.read_json(results_file)
 
+def process_results(results_file, labels_filename, params=None):
+    results_df = read_json_results(results_file)
+
+    nmi = -1
+
+    if params is not None:
+        results_df["params"] = [copy.deepcopy(params.__dict__)]
+
+    if labels_filename is not None:
+        true_labels = get_mnist_labels(labels_filename)
+
+        nmi = calculate_nmi(true_labels, results_df['clusterLabels'][0])
+
+        results_df["nmi"] = nmi
+    
+    return results_df
 
 def calculate_nmi(labels_true, labels_pred):
     return normalized_mutual_info_score(labels_true, labels_pred)
@@ -165,24 +188,13 @@ def run_complete_sdbscan_pipeline(params: RunParams, results_parquet_name = None
         print(e)
         print('Exiting Loop')
         return None
-
-    results_df = read_results(params.outputFilename)
-
-    nmi = -1
-
-    results_df["params"] = [copy.deepcopy(params.__dict__)]
-
-    if params.labels_filename is not None:
-        true_labels = get_mnist_labels(params.labels_filename)
-
-        nmi = calculate_nmi(true_labels, results_df['clusterLabels'][0])
-
-        results_df["nmi"] = nmi
+    
+    results_df = process_results(params.outputfile_path, params.labels_filename, params)
 
     if results_parquet_name is not None:
         results_df.to_parquet(results_parquet_name)
 
-    print_results(results_df, nmi)
+    print_results(results_df, results_df["nmi"])
 
     return results_df
 
@@ -204,21 +216,57 @@ def run_k_m_experiments(k_m_vals, params, parquet_name=None):
 
     return results_df
 
-def get_k_m_experiments_table(k_m_vals, results_df):
+def process_k_m_results(results_dir, labels_path, clean=False):
+    all_results_dfs = []
+
+    for file in os.listdir(results_dir):
+
+        if file.endswith(".json"):
+            file_path = os.path.join(results_dir, file)
+
+            matches = re.findall(r'k(\d+)_m(\d+)', file)
+            
+            k = int(matches[0][0])
+            m = int(matches[0][1])
+
+            if k > m:
+                continue
+
+            this_df = process_results(file_path, labels_path)
+
+            this_df['k'] = k
+            this_df['m'] = m
+
+            all_results_dfs.append(this_df)
+
+    all_results_df = pd.concat(all_results_dfs)
+
+    if clean:
+        all_results_df.drop(columns=["clusterLabels"], inplace=True)
+        all_results_df.sort_values(by="k", ascending=False, inplace=True)
+    
+    return all_results_df
+
+def get_k_m_experiments_table(results_df):
     overall_times = results_df['times'].apply(lambda x: x['overall']).values
     overall_times = np.array(overall_times) / 1000000
+    overall_times = overall_times.round(2)
 
     nmi_vals = results_df['nmi'].values
+    nmi_vals = nmi_vals.round(2)
 
     table_df = pd.DataFrame({
-        "m": [m for _, m in k_m_vals],
-        "k": [k for k, _ in k_m_vals],
+        "k": [k for k in results_df["k"]],
+        "m": [m for m in results_df["m"]],
+        "2km" : [2*k*m for k, m in zip(results_df["k"], results_df["m"])],
         "Time (s)": overall_times,
         "NMI": nmi_vals
     })
 
+    table_df.sort_values(by=["2km", "Time (s)"], inplace=True)
+
     # Convert the DataFrame to LaTeX format
-    latex_table = table_df.to_latex(index=False, column_format='c'*len(table_df.columns), escape=False)
+    latex_table = table_df.to_latex(index=False, column_format='c'*len(table_df.columns), escape=False, float_format="%.2f")
 
     return latex_table
 
