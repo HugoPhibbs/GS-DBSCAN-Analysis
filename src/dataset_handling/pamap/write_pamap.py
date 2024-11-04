@@ -1,6 +1,3 @@
-import os
-import pandas as pd
-import polars as pl
 import numpy as np
 from tqdm import tqdm
 import src.experiment.sample_utils as su
@@ -19,18 +16,18 @@ PAMAP_LABELS_PATH = f"{PAMAP_DATA_DIR}/handled/pamap_labels.bin"
 PAMAP_SAMPLES_DIR = f"{PAMAP_DATA_DIR}/handled/samples"
 
 PAMAP_SAMPLE_SIZES = [
+    50_000,
     100_000,
-    250_000,
-    325_000,
-    500_000,
-    750_000,
+    200_000,
+    300_000,
+    400_000,
+    600_000,
+    800_000,
     1_000_000,
-    1_500_000,
-    2_000_000,
-    2_500_000,
-    3_000_000,
-    3_500_000,
-    3_850_505
+    1_200_000,
+    1_400_000,
+    1_600_000,
+    1_770_131,
 ]
 
 PAMAP_PATHS_DICT = {
@@ -42,100 +39,17 @@ PAMAP_SAMPLES_PATHS_DICT = su.get_sample_dict("pamap", PAMAP_SAMPLE_SIZES, PAMAP
 
 
 PAMAP_DIM = 51
-PAMAP_N = 3850505
+PAMAP_N = 1770131
 
 
-def write_df():
-    file_dirs = os.listdir(PAMAP_DIR)
+def process_pamap2(dtype="f32"):
+    arr = np.loadtxt(rf"{PAMAP_HANDLED_DIR}/pamap2_X_no_0", dtype=np.float64)
 
-    df_list = []
+    arr.astype(np.float32 if dtype=="f32" else np.float16).tofile(PAMAP_F32_PATH if dtype=="f32" else PAMAP_F16_PATH)
 
-    for dir in file_dirs:
-        if dir != "Protocol":
-            continue
+    labels = np.loadtxt(rf"{PAMAP_HANDLED_DIR}/pamap2_y_no_0_1770131_51", dtype=np.float64)
 
-        this_dir = os.path.join(PAMAP_DIR, dir)
-        pamap_files = os.listdir(this_dir)
-        pamap_files = [os.path.join(this_dir, f) for f in pamap_files]
-
-        for f in pamap_files:
-            df = pd.read_csv(f, sep=" ", header=None)
-            df_list.append(df)
-
-    df = pd.concat(df_list)
-
-    df.columns = [str(col_idx) for col_idx in range(len(df.columns))]
-
-    df.to_parquet(os.path.join(PAMAP_HANDLED_DIR, PAMAP_DF_NAME), engine="fastparquet")
-
-    print(df.head())
-
-
-def write_arrays():
-
-    df_path = os.path.join(PAMAP_HANDLED_DIR, PAMAP_DF_NAME)
-    df = pl.read_parquet(df_path)
-
-
-    df = df.filter(pl.col("1") != 0) # Remove transcient activity
-
-    from functools import reduce
-
-    df = df.filter(
-        reduce(lambda a, b: a & b, [pl.col(col).is_not_null() for col in df.columns if col != "2"])
-    )
-
-    labels = df["1"]
-    df = df.drop(["0", "1", "2", "index"])  # drop timestamp, activity_id and heart rate
-
-
-    np_df = df.to_numpy()
-    np_labels = labels.to_numpy()
-
-    np_df.astype(np.float32).tofile(PAMAP_F32_PATH)
-    np_df.astype(np.float16).tofile(PAMAP_F16_PATH)
-
-    np_labels.astype(np.int8).tofile(PAMAP_LABELS_PATH)
-
-
-def process_pamap2(input_path, output_path):
-    X = []
-    y = []
-    
-    # Iterate over files from subject101.dat to subject109.dat
-    for i in range(1, 10):  # 1 through 9, inclusive
-        filename = os.path.join(input_path, f'subject10{i}.dat')
-        
-        # Load data and process it
-        data = np.loadtxt(filename)
-        print("Original size:", data.shape)
-        
-        # Remove the 3rd column (index 2) and 1st column (index 0)
-        data = np.delete(data, [0, 2], axis=1)
-        
-        # Remove any rows with NaN values
-        data = data[~np.isnan(data).any(axis=1)]
-        print("Size after NaN removal:", data.shape)
-        
-        # Separate labels and features
-        y.extend(data[:, 0])
-        X.extend(data[:, 1:])
-        
-    # Convert to numpy arrays for further processing
-    X = np.array(X)
-    y = np.array(y)
-    
-    # Remove rows where label (y) is 0
-    non_zero_indices = y != 0
-    y = y[non_zero_indices]
-    X = X[non_zero_indices]
-    
-    print("Final X size:", X.shape)
-    print("Final y size:", y.shape)
-    
-    # Save the processed data
-    np.savetxt(os.path.join(output_path, 'pamap2_X_no_0.txt'), X, delimiter='\t', fmt='%.6f')
-    np.savetxt(os.path.join(output_path, 'pamap2_y_no_0.txt'), y, delimiter='\t', fmt='%.6f')
+    labels.astype(np.int8).tofile(PAMAP_LABELS_PATH)
 
 
 def write_samples(dtype=np.float32, dtype_str="f32"):
@@ -160,9 +74,6 @@ def write_samples(dtype=np.float32, dtype_str="f32"):
 
 
 if __name__ == "__main__":
-    # write_samples(dtype=np.float32, dtype_str= "f32")
-    
-    # Example usage
-    input_path = '/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/raw/Protocol'
-    output_path = '/home/hphi344/Documents/GS-DBSCAN-Analysis/data/pamap/handled'
-    # process_pamap2(input_path, output_path)
+    process_pamap2("f16")
+    write_samples(np.float16, "f16")
+    print("Done!")
