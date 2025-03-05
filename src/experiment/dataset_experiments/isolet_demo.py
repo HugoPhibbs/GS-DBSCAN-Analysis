@@ -23,7 +23,7 @@ nmi_scores = []
 
 start = time.time()
 
-dbscan = DBSCAN(eps=0.12, min_samples=min_samples, metric='cosine')
+dbscan = DBSCAN(eps=0.12, min_samples=min_samples, metric='cosine', n_jobs=-1)
 labels = dbscan.fit_predict(X_normalized)
 
 end = time.time()

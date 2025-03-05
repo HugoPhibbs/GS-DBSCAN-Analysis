@@ -34,7 +34,7 @@ PAMAP_PATHS_DICT = {
     "f32": PAMAP_F32_PATH,
     "f16": PAMAP_F16_PATH,
 }
-
+    
 PAMAP_SAMPLES_PATHS_DICT = su.get_sample_dict("pamap", PAMAP_SAMPLE_SIZES, PAMAP_SAMPLES_DIR)
 
 
@@ -54,7 +54,6 @@ def process_pamap2(dtype="f32"):
 
 def write_samples(dtype=np.float32, dtype_str="f32"):
     pamap_array = np.fromfile(PAMAP_F32_PATH, dtype=np.float32)
-    pamap_array = pamap_array.astype(np.float16)
     pamap_array = pamap_array.reshape(-1, PAMAP_DIM)
 
     pamap_labels = np.fromfile(PAMAP_LABELS_PATH, dtype=np.int8)
@@ -71,9 +70,31 @@ def write_samples(dtype=np.float32, dtype_str="f32"):
 
         sample.astype(dtype).tofile(this_path)
         sample_labels.astype(np.int8).tofile(samples_labels_paths_dict[size])
+    
+
+def write_samples_sorted(dtype=np.float32, dtype_str="f32"):
+    pamap_array = np.fromfile(PAMAP_F32_PATH, dtype=np.float32)
+    pamap_array = pamap_array.reshape(-1, PAMAP_DIM)
+
+    pamap_labels = np.fromfile(PAMAP_LABELS_PATH, dtype=np.int8)
+
+    samples_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype_str]["data"]
+    samples_labels_paths_dict = PAMAP_SAMPLES_PATHS_DICT[dtype_str]["labels"]
+
+    for size in tqdm(PAMAP_SAMPLE_SIZES, desc="Writing samples"):
+        this_path = samples_paths_dict[size]
+        sample_indices = np.random.choice(len(pamap_array), size=size, replace=False)
+
+        sample_indices = np.sort(sample_indices)
+
+        sample = pamap_array[sample_indices]
+        sample_labels = pamap_labels[sample_indices]
+
+        sample.astype(dtype).tofile(this_path)
+        sample_labels.astype(np.int8).tofile(samples_labels_paths_dict[size])
 
 
 if __name__ == "__main__":
-    process_pamap2("f16")
-    write_samples(np.float16, "f16")
+    # process_pamap2("f16")
+    write_samples()
     print("Done!")

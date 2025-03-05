@@ -31,6 +31,7 @@ class CpuRunParams:
     labels_filename: str = None
     labels_file_type: str = "txt"
     interval_sampling: int = 0.4
+    shuffle: bool = False
 
 
 def run_cpu_sdbscan(run_params: CpuRunParams, parquet_path=None):
@@ -39,6 +40,9 @@ def run_cpu_sdbscan(run_params: CpuRunParams, parquet_path=None):
     else:
         # Assume binary
         dataset = np.fromfile(run_params.datasetFilename, dtype=np.float32).reshape(run_params.n, run_params.d)
+
+    if run_params.shuffle:
+        np.random.shuffle(dataset)
 
     dataset_t = np.transpose(dataset)
 

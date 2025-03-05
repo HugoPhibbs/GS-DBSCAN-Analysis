@@ -65,7 +65,7 @@ def run_sample_experiments_cpu(cpu_params: exp_cpu.CpuRunParams, results_dir: st
 
         set_params_labels_and_data_paths(sample_paths_dict, cpu_params, cpu_params.n, "f32")
 
-        this_result_df = exp_cpu.run_cpu_sdbscan(cpu_params, running_sample=True)
+        this_result_df = exp_cpu.run_cpu_sdbscan(cpu_params)
 
         results_df_list.append(this_result_df)
 
@@ -103,6 +103,9 @@ def plot_compare_cpu_gpu_time(results_gpu_df, results_cpu_df, save_path=None, ti
         time_vals_gpu = np.array([times["overall"] for times in results_gpu_df["times"]]) / 1e6
         time_vals_cpu = np.array([times["overall"] for times in results_cpu_df["times"]]) / 1e6
 
+        print(time_vals_cpu)
+        print(time_vals_gpu)
+
         speedup_vals = time_vals_cpu / time_vals_gpu
 
         ax2 = ax.twinx()
@@ -134,17 +137,18 @@ def plot_compare_cpu_gpu_nmi(results_gpu_df, results_cpu_df, title ="Sample size
         plt.savefig(save_path, dpi=300)
 
 
-def plot_sample_nmi_results(sample_results_df, save_path=None, title="Sample size vs NMI", fig=None, ax=None):
+def plot_sample_nmi_results(sample_results_df, save_path=None, title="Sample size vs NMI", fig=None, ax=None, **kwargs):
     n_vals = [params["n"] for params in sample_results_df["params"]]
     nmi_vals = sample_results_df["nmi"]
 
     if fig is None and ax is None:
         fig, ax = plt.subplots()
-    ax.plot(n_vals, nmi_vals)
+    ax.plot(n_vals, nmi_vals, **kwargs)
     ax.set_title(title)
     ax.set_xlabel("Sample Size")
     ax.set_ylabel("NMI")
     ax.set_ylim(0, 0.5)
+    # ax.lines[0].set_linestyle(line_style)
 
     if save_path is not None:
         plt.savefig(save_path, dpi=300)

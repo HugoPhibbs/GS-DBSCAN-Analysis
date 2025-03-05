@@ -46,6 +46,7 @@ class RunParams:
     print_cmd: bool = True
     ignoreAdjListSymmetry: bool = False
     outputfile_dir: str = None
+    shuffleDataset: bool = False
 
     def __str__(self):
         filename = os.path.splitext(os.path.basename(self.datasetFilename))[0]
@@ -108,6 +109,9 @@ def run_gs_dbscan(params: RunParams):
 
     if params.ignoreAdjListSymmetry:
         run_cmd.append("--ignoreAdjListSymmetry")
+
+    if params.shuffleDataset:
+        run_cmd.append("--shuffleDataset")
 
     print("Running GS-DBSCAN\n")
 
